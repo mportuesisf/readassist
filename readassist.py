@@ -129,7 +129,7 @@ def read_assist_web():
     if error:
         return render_template_string(HTML_TEMPLATE, text=text, lang=lang_name, model=model, results=json_data, error=error)
 
-    formatted_results = markdown.markdown(json_data.get('response', "<p><em>No information returned.</em></p>"))
+    formatted_results = markdown.markdown(json_data.get('response', "<p><em>No information returned.</em></p>"), extensions=['markdown.extensions.tables'])
     return render_template_string(HTML_TEMPLATE, text=text, lang=lang_name, model=model, results=formatted_results, error=None)
 
 def run_web(host, port):
