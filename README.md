@@ -1,17 +1,20 @@
 # ReadAssist
 
-A Python webapp to query cloud AI for information on words, from a Kobo e-reader device
+A Python webapp to query cloud AI for information on words, from a Kobo e-reader device.
+
+It can ask a remote AI to define a word and provide information on etymology, usage, idioms and other kinds of infromation that a human studying the language might need to know to understand and memorize the word.
+
+The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gaskin's [NickelMenu](https://github.com/pgaskin/NickelMenu) utility, which can customize the Kobo user interface, adding custom menu options and commands.
 
 ### Requirements
 
-* AI backend (Ollama)
+* AI backend either local or cloud-based (Ollama)
 * Web server capable of hosting a Python webapp
 * Kobo e-reader device
-
+ 
 ### Installation/Configuration
 
 XXX setup instructions go here
-
 
 #### Webserver Host
 
@@ -19,13 +22,19 @@ XXX setup instructions go here
 
 #### Kobo Device
 
-XXX setup instructions go here
+* Install the NickelMenu utility on the Kobo device, following the instructions provided on the NickelMenu website.
+
+* Here is an example configuration line to add to the NickelMenu `config` file.  Adjust it to taste based on the options described in the next section:
+
+```
+menu_item		:selection			:Read Assist	:nickel_browser:modal:http://192.168.0.94:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=idioms&text={1|S|%}&lang=it
+```
 
 ### Options
 
 The script takes the following parameters, as URL parameters on a GET request.
 
-###### `req\_type`
+###### `req_type`
 
 One or more of the following one-word tokens that indicates the following type of information to be requested:
 
@@ -55,9 +64,9 @@ Name of the AI model to be queried.
 ### Examples
 
 ```
-http://localhost:5000/readassist?req\_type=translate\&req\_type=usage\&req\_type=synonyms\&req\_type=phrases\&lang=it\&text=cominciare
+http://localhost:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=phrases&lang=it&text=cominciare
 
-http://localhost:5000/readassist?req\_type=translate\&lang=it\&text=cominciare
+http://localhost:5000/readassist?req_type=translate&lang=it&text=cominciare
 
-http://localhost:5000/readassist?req\_type=translate\&req\_type=irregular\&req\_type=phrases\&lang=it\&text=invadere
+http://localhost:5000/readassist?req_type=translate&req_type=irregular&req_type=phrases&lang=it&text=invadere
 ```
