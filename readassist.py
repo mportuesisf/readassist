@@ -1,16 +1,17 @@
 #!/usr/bin/env python3
-import subprocess
+import requests
 import json
-import shlex
 import sys
 import argparse
 import markdown
 from flask import Flask, request, render_template_string
 
 app = Flask(__name__)
-CACHE = {}
 
 # --- Configuration & Helpers ---
+
+# Configure the API endpoint
+OLLAMA_URL = "http://localhost:11434/api/generate"
 
 # (LANG_MAP and INSTRUCTION_MAP remain the same)
 # Mapping ISO 639-1 codes to full English names for better prompting
@@ -35,75 +36,46 @@ INSTRUCTION_MAP = {
     'irregular': "provide notes about any deviances from standard grammar rules this word may have (e.g., irregular conjugations)"
 }
 
-
 def get_full_lang_name(code):
     return LANG_MAP.get(code.lower(), f"language (ISO code: {code})")
 
 def build_prompt(lang_code, text, req_types):
-    """Constructs the prompt for the Gemini CLI."""
+    """Constructs the prompt for the AI."""
     lang_name = get_full_lang_name(lang_code)
     prompt_instructions = [f"{i}) {INSTRUCTION_MAP.get(r_type, f'provide info on {r_type}')}" for i, r_type in enumerate(req_types, 1)]
     instructions_str = ", ".join(prompt_instructions)
     return (
         f"Given the {lang_name} word (or phrase) '{text}', please: {instructions_str}. "
-        f"IMPORTANT: Return the response strictly as a raw JSON object (no markdown code blocks like ```json). "
-        f"The keys of the JSON object must be the exact request type tokens provided: {', '.join(req_types)}. "
-        f"The values should be the informative text formatted in Markdown."
     )
 
-def get_gemini_response(prompt, model):
-    """Invokes the Gemini CLI, with caching, and returns the parsed JSON response."""
-    cache_key = f"{model}|{prompt}"
-    if cache_key in CACHE:
-        print("DEBUG: Returning response from cache.", file=sys.stderr)
-        return CACHE[cache_key], None
+def get_response(prompt, model):
+    """Invokes the AI via Ollama REST API and returns the parsed JSON response."""
+
+    # Prepare the request payload
+    payload = {
+        "model": model,
+        "prompt": prompt,
+        "stream": False
+    }
 
     try:
-        command = ['gemini']
-        if model:
-            # Assuming the gemini CLI uses a --model flag
-            command.extend(['--model', model])
-        command.append(prompt)
-        
-        print(f"DEBUG: Running command: {' '.join(shlex.quote(c) for c in command)}", file=sys.stderr)
+        # Make the HTTP request
+        response = requests.post(OLLAMA_URL, json=payload)
 
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        raw_output = result.stdout.strip()
-
-        if raw_output.startswith("```json"):
-            raw_output = raw_output[7:-3]
-
-        json_data = json.loads(raw_output)
-        CACHE[cache_key] = json_data  # Store in cache
-        return json_data, None
-    except FileNotFoundError:
-        return None, "The 'gemini' executable was not found. Please ensure the Gemini CLI is installed and in your PATH."
-    except subprocess.CalledProcessError as e:
-        return None, f"Gemini CLI Error: {e.stderr}"
+        # Parse and display the response
+        if response.status_code == 200:
+            result = response.json()
+            return result, None
+        elif response.status_code == 404:
+            raise Exception(f"Model not found: {payload.get('model')}")
+        elif response.status_code == 500:
+            raise Exception("Ollama server error")
+        else:
+            raise Exception(f"HTTP {response.status_code}: {response.text}")
     except json.JSONDecodeError:
-        return None, f"Failed to parse JSON response from Gemini. Raw Output: {raw_output}"
+        return None, f"Failed to parse JSON response. Raw Output: {response.content}"
     except Exception as e:
         return None, str(e)
-
-# --- CLI Mode ---
-def run_cli(text, lang_code, req_types, model):
-    """Handles the command-line execution."""
-    print(f"Querying for '{text}' ({get_full_lang_name(lang_code)}) using model '{model}'...")
-    
-    prompt = build_prompt(lang_code, text, req_types)
-    json_data, error = get_gemini_response(prompt, model)
-
-    if error:
-        print(f"\nERROR: {error}", file=sys.stderr)
-        sys.exit(1)
-
-    print("\n--- RESULTS ---")
-    for r_type in req_types:
-        print(f"\n[{r_type.upper()}]")
-        if r_type in json_data:
-            print(json_data[r_type])
-        else:
-            print("No information returned for this section.")
 
 # --- Web Server Mode ---
 HTML_TEMPLATE = """
@@ -131,12 +103,9 @@ HTML_TEMPLATE = """
     {% if error %}
         <div class="error"><h3>Error Processing Request</h3><p>{{ error }}</p></div>
     {% else %}
-        {% for key, content in results.items() %}
         <div class="section">
-            <div class="section-title">{{ key }}</div>
-            <div class="section-content">{{ content | safe }}</div>
+            <div class="section-content">{{ results }}</div>
         </div>
-        {% endfor %}
     {% endif %}
 </body>
 </html>
@@ -147,19 +116,19 @@ def read_assist_web():
     req_types = request.args.getlist('req_type')
     lang_code = request.args.get('lang', 'en')
     text = request.args.get('text', '')
-    model = request.args.get('model', 'gemini-2.5-flash') # Default model for web
+    model = request.args.get('model', 'gemma3:4b') # Default model for web
 
     if not text or not req_types:
         return render_template_string(HTML_TEMPLATE, text="Missing Input", lang="N/A", model=model, error="Please provide 'text' and at least one 'req_type'.", results={})
 
     lang_name = get_full_lang_name(lang_code)
     prompt = build_prompt(lang_code, text, req_types)
-    json_data, error = get_gemini_response(prompt, model)
+    json_data, error = get_response(prompt, model)
 
     if error:
-        return render_template_string(HTML_TEMPLATE, text=text, lang=lang_name, model=model, results={}, error=error)
+        return render_template_string(HTML_TEMPLATE, text=text, lang=lang_name, model=model, results=json_data, error=error)
 
-    formatted_results = {r_type: markdown.markdown(json_data.get(r_type, "<p><em>No information returned.</em></p>")) for r_type in req_types}
+    formatted_results = markdown.markdown(json_data.get('response', "<p><em>No information returned.</em></p>"))
     return render_template_string(HTML_TEMPLATE, text=text, lang=lang_name, model=model, results=formatted_results, error=None)
 
 def run_web(host, port):
@@ -169,24 +138,10 @@ def run_web(host, port):
 
 # --- Main Execution ---
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="ReadAssist: A tool to help with reading foreign languages using Gemini.")
-    subparsers = parser.add_subparsers(dest='command', required=True, help='Available commands')
+    parser = argparse.ArgumentParser(description="ReadAssist: A tool to help with reading foreign languages using Ollama.")
 
-    # --- CLI Sub-command ---
-    parser_cli = subparsers.add_parser('cli', help='Run in command-line mode.')
-    parser_cli.add_argument('text', type=str, help='The word or phrase to look up.')
-    parser_cli.add_argument('req_types', nargs='+', choices=list(INSTRUCTION_MAP.keys()), help='One or more information types to request.')
-    parser_cli.add_argument('--lang', type=str, default='it', help=f'The two-letter language code.')
-    parser_cli.add_argument('--model', type=str, default='gemini-2.5-flash', help='The Gemini model to use (e.g., gemini-2.5-flash, gemini-pro).')
-    
-    # --- Web Sub-command ---
-    parser_web = subparsers.add_parser('web', help='Run as a web server.')
-    parser_web.add_argument('--host', type=str, default='0.0.0.0', help='Host for the web server.')
-    parser_web.add_argument('--port', type=int, default=5000, help='Port for the web server.')
+    parser.add_argument('--host', type=str, default='0.0.0.0', help='Host for the web server.')
+    parser.add_argument('--port', type=int, default=5000, help='Port for the web server.')
 
     args = parser.parse_args()
-
-    if args.command == 'cli':
-        run_cli(args.text, args.lang, args.req_types, args.model)
-    elif args.command == 'web':
-        run_web(args.host, args.port)
+    run_web(args.host, args.port)
