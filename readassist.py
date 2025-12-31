@@ -104,7 +104,8 @@ HTML_TEMPLATE = """
         <div class="error"><h3>Error Processing Request</h3><p>{{ error }}</p></div>
     {% else %}
         <div class="section">
-            <div class="section-content">{{ results }}</div>
+            <div class="section-title">{{ text }} ({{ lang }})</div>
+            <div class="section-content">{{ results|safe }}</div>
         </div>
     {% endif %}
 </body>
