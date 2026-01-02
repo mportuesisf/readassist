@@ -1,0 +1,8 @@
+#!/bin/bash
+systemctl --user stop readassist.service
+cp ./readassist.py ~/bin
+chmod +x ~/bin/readassist.py
+cp ./readassist.service ~/.config/systemd/user
+systemctl --user daemon-reload
+systemctl --user start readassist.service
+echo "Application script deployed."
