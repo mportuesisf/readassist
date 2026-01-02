@@ -123,18 +123,19 @@ def wake_ollama_server():
     """Sends a Wake-on-LAN packet to the Ollama server."""
     MAX_RETRIES = 5
 
-    send_magic_packet(RA_OLLAMA_HOST_MAC, ip_address=RA_OLLAMA_HOST_IP)
-
     # wait and check to see the server is awake
     for attempt in range(MAX_RETRIES):
         try:
-            response = requests.get(OLLAMA_STATUS_URL)
-            if response.status_code == 200:
-                return
-            time.sleep(2*(attempt+1))
+            send_magic_packet(RA_OLLAMA_HOST_MAC)
+            # Use a short timeout and raise for status to catch non-2xx codes
+            resp = requests.get(OLLAMA_STATUS_URL, timeout=5)
+            resp.raise_for_status()
+            return True
         except requests.exceptions.RequestException:
-            time.sleep(2*(attempt+1))  # backoff
+            # backoff and retry
+            time.sleep(2 * (attempt + 1))
             continue
+    return False
 
 @app.route('/readassist', methods=['GET'])
 def read_assist_web():
@@ -145,10 +146,12 @@ def read_assist_web():
 
     if not text or not req_types:
         return render_template_string(HTML_TEMPLATE, text="Missing Input", lang="N/A", model=model, error="Please provide 'text' and at least one 'req_type'.", results={})
+
+    if not wake_ollama_server():
+        return render_template_string(HTML_TEMPLATE, text="Service unavailable", lang="N/A", model=model, error="Failed to wake Ollama server.", results={})
+
     lang_name = get_full_lang_name(lang_code)
     prompt = build_prompt(lang_code, text, req_types)
-
-    wake_ollama_server()
     json_data, error = get_response(prompt, model)
 
     if error:
