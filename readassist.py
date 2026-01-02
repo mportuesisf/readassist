@@ -131,9 +131,9 @@ def wake_ollama_server():
             response = requests.get(OLLAMA_STATUS_URL)
             if response.status_code == 200:
                 return
-            time.sleep(2*attempt)
+            time.sleep(2*(attempt+1))
         except requests.exceptions.RequestException:
-            time.sleep(2*attempt)  # backoff
+            time.sleep(2*(attempt+1))  # backoff
             continue
 
 @app.route('/readassist', methods=['GET'])
@@ -148,7 +148,7 @@ def read_assist_web():
     lang_name = get_full_lang_name(lang_code)
     prompt = build_prompt(lang_code, text, req_types)
 
-    wake_ollama_server()  # Ensure the Ollama server is awake
+    wake_ollama_server()
     json_data, error = get_response(prompt, model)
 
     if error:
