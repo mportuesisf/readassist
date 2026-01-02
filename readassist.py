@@ -1,17 +1,24 @@
 #!/usr/bin/env python3
 import requests
 import json
-import sys
+import time
 import argparse
 import markdown
 from flask import Flask, request, render_template_string
+from wakeonlan import send_magic_packet
 
 app = Flask(__name__)
 
 # --- Configuration & Helpers ---
 
-# Configure the API endpoint
-OLLAMA_URL = "http://localhost:11434/api/generate"
+# Configure the backend Ollama API endpoint
+# TODO externalize this configuration
+RA_OLLAMA_HOST_MAC='c8.a3.e8.86.9c.21'
+RA_OLLAMA_HOST_IP='192.168.0.109'
+RA_OLLAMA_PORT='11434'
+
+OLLAMA_URL = f"http://{RA_OLLAMA_HOST_IP}:{RA_OLLAMA_PORT}/api/generate"
+OLLAMA_STATUS_URL = f"http://{RA_OLLAMA_HOST_IP}:{RA_OLLAMA_PORT}/api/version"
 
 # (LANG_MAP and INSTRUCTION_MAP remain the same)
 # Mapping ISO 639-1 codes to full English names for better prompting
@@ -35,6 +42,41 @@ INSTRUCTION_MAP = {
     'idioms': "provide a list of common idioms that use this word, in its own language",
     'irregular': "provide notes about any deviances from standard grammar rules this word may have (e.g., irregular conjugations)"
 }
+
+# Template for rendering HTML responses
+HTML_TEMPLATE = """
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ReadAssist: {{ text }}</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
+        h1 { border-bottom: 2px solid #4285f4; padding-bottom: 10px; }
+        .word-header { background: #f1f3f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        .section { margin-bottom: 25px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
+        .section-title { background: #e8f0fe; color: #1967d2; padding: 10px 15px; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
+        .section-content { padding: 15px; }
+        .error { color: #d32f2f; background: #fdecea; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; }
+    </style>
+</head>
+<body>
+    <div class="word-header">
+        <h2>Query: <em>{{ text }}</em> ({{ lang }})</h2>
+        <p>Model: {{ model }}</p>
+    </div>
+    {% if error %}
+        <div class="error"><h3>Error Processing Request</h3><p>{{ error }}</p></div>
+    {% else %}
+        <div class="section">
+            <div class="section-title">{{ text }} ({{ lang }})</div>
+            <div class="section-content">{{ results|safe }}</div>
+        </div>
+    {% endif %}
+</body>
+</html>
+"""
 
 def get_full_lang_name(code):
     return LANG_MAP.get(code.lower(), f"language (ISO code: {code})")
@@ -77,53 +119,36 @@ def get_response(prompt, model):
     except Exception as e:
         return None, str(e)
 
-# --- Web Server Mode ---
-HTML_TEMPLATE = """
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ReadAssist: {{ text }}</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; color: #333; }
-        h1 { border-bottom: 2px solid #4285f4; padding-bottom: 10px; }
-        .word-header { background: #f1f3f4; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        .section { margin-bottom: 25px; border: 1px solid #e0e0e0; border-radius: 8px; overflow: hidden; }
-        .section-title { background: #e8f0fe; color: #1967d2; padding: 10px 15px; font-weight: bold; text-transform: uppercase; font-size: 0.9em; }
-        .section-content { padding: 15px; }
-        .error { color: #d32f2f; background: #fdecea; padding: 15px; border-radius: 8px; border: 1px solid #f5c6cb; }
-    </style>
-</head>
-<body>
-    <div class="word-header">
-        <h2>Query: <em>{{ text }}</em> ({{ lang }})</h2>
-        <p>Model: {{ model }}</p>
-    </div>
-    {% if error %}
-        <div class="error"><h3>Error Processing Request</h3><p>{{ error }}</p></div>
-    {% else %}
-        <div class="section">
-            <div class="section-title">{{ text }} ({{ lang }})</div>
-            <div class="section-content">{{ results|safe }}</div>
-        </div>
-    {% endif %}
-</body>
-</html>
-"""
+def wake_ollama_server():
+    """Sends a Wake-on-LAN packet to the Ollama server."""
+    MAX_RETRIES = 5
+
+    send_magic_packet(RA_OLLAMA_HOST_MAC, ip_address=RA_OLLAMA_HOST_IP)
+
+    # wait and check to see the server is awake
+    for attempt in range(MAX_RETRIES):
+        try:
+            response = requests.get(OLLAMA_STATUS_URL)
+            if response.status_code == 200:
+                return
+            time.sleep(2*attempt)
+        except requests.exceptions.RequestException:
+            time.sleep(2*attempt)  # backoff
+            continue
 
 @app.route('/readassist', methods=['GET'])
 def read_assist_web():
     req_types = request.args.getlist('req_type')
     lang_code = request.args.get('lang', 'en')
     text = request.args.get('text', '')
-    model = request.args.get('model', 'gemma3:4b') # Default model for web
+    model = request.args.get('model', 'gpt-oss:20b') # Default model for web
 
     if not text or not req_types:
         return render_template_string(HTML_TEMPLATE, text="Missing Input", lang="N/A", model=model, error="Please provide 'text' and at least one 'req_type'.", results={})
-
     lang_name = get_full_lang_name(lang_code)
     prompt = build_prompt(lang_code, text, req_types)
+
+    wake_ollama_server()  # Ensure the Ollama server is awake
     json_data, error = get_response(prompt, model)
 
     if error:
