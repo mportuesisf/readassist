@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import os
 import requests
 import json
 import time
@@ -12,10 +13,9 @@ app = Flask(__name__)
 # --- Configuration & Helpers ---
 
 # Configure the backend Ollama API endpoint
-# TODO externalize this configuration
-RA_OLLAMA_HOST_MAC='c8.a3.e8.86.9c.21'
-RA_OLLAMA_HOST_IP='192.168.0.109'
-RA_OLLAMA_PORT='11434'
+RA_OLLAMA_HOST_MAC=os.environ.get('RA_OLLAMA_HOST_MAC','c8.a3.e8.86.9c.21')
+RA_OLLAMA_HOST_IP=os.environ.get('RA_OLLAMA_HOST_IP','192.168.0.109')
+RA_OLLAMA_PORT=os.environ.get('RA_OLLAMA_PORT','11434')
 
 OLLAMA_URL = f"http://{RA_OLLAMA_HOST_IP}:{RA_OLLAMA_PORT}/api/generate"
 OLLAMA_STATUS_URL = f"http://{RA_OLLAMA_HOST_IP}:{RA_OLLAMA_PORT}/api/version"
