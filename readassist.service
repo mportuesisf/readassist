@@ -8,8 +8,7 @@ Environment "RA_OLLAMA_HOST_MAC=c8.a3.e8.86.9c.21"
 Environment "RA_OLLAMA_HOST_IP=192.168.0.109"
 Environment "RA_OLLAMA_PORT=11434"
 ExecStart=/home/portuesi/pythonvenv/bin/python /home/portuesi/bin/readassist.py
-Restart=on-failure
-OOMPolicy=stop
+Restart=always
 
 [Install]
 WantedBy=default.target
