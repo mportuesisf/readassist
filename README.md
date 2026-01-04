@@ -2,9 +2,9 @@
 
 A Python webapp to query cloud AI for information on words, from a Kobo e-reader device.
 
-It can ask a remote AI to define a word and provide information on etymology, usage, idioms and other kinds of infromation that a human studying the language might need to know to understand and memorize the word.
+It can ask a remote AI model to define a word and provide information on etymology, usage, idioms and other kinds of information that a human studying the language might need to know to understand and memorize the word.
 
-The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gaskin's [NickelMenu](https://github.com/pgaskin/NickelMenu) utility, which can customize the Kobo user interface, adding custom menu options and commands.
+The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gaskin's [NickelMenu](https://github.com/pgaskin/NickelMenu) utility. Nickelmenu allows you to customize the Kobo user interface, by adding custom menu options and commands.
 
 ### Requirements
 
@@ -17,14 +17,20 @@ The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gas
 ##### Web application (readassist.py)
 
 ###### Invocation
-In addition to the standard python installation, you will need the following additional python modules installed on your system:
+In addition to the standard Python installation, you will need the following additional Python modules installed on your system:
 
 * `markdown`
 * `json`
 * `flask`
 * `wakeonlan`
 
-The last dependency, `wakeonlan`, is a bit of a pain-in-the-ass because it is not included in the standard Debian-style install packages associated with Ubuntu Linux distributions.  To install it without going outside the boundaries established by the distribution maintainers, you will need to set up a virtual Python environment and install the `wakelonlan` utility into the virtual environment using the Python standard `pip` utility, then invoke the `readassist` script using that virtual environment.  An outline of the commands necessary is thoughtfully provided by the Ubuntu maintainers the moment you try to install the `wakeonlan` module to the standard Python environment via `pip`.
+The last dependency, `wakeonlan`, is a bit of a pain-in-the-ass because it is not included in the standard Debian-style install packages associated with Ubuntu Linux distributions.  To install it without going outside the boundaries established by the distribution maintainers, you will need to:
+
+1. set up a virtual Python environment
+2. install the `wakelonlan` utility into the virtual environment using the Python standard `pip` utility
+3. invoke the `readassist` script using that virtual environment.
+
+An outline of the commands necessary is thoughtfully provided by the Ubuntu maintainers the moment you try to use `pip install wakeonlan` to install the `wakeonlan` module to the standard Python environment.
 
 ###### Invocation
 This is a Python Flask web application, that uses Flask's built-in web server.  To run it, simply invoke it from the shell:
@@ -127,7 +133,7 @@ Name of the AI model to be queried.
 ```
 http://localhost:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=phrases&lang=it&text=cominciare
 
-http://localhost:5000/readassist?req_type=translate&lang=it&text=cominciare
+http://localhost:5000/readassist?req_type=translate&lang=it&text=lusingare
 
 http://localhost:5000/readassist?req_type=translate&req_type=irregular&req_type=phrases&lang=it&text=invadere
 ```
