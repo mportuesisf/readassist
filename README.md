@@ -17,6 +17,16 @@ The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gas
 ##### Web application (readassist.py)
 
 ###### Invocation
+In addition to the standard python installation, you will need the following additional python modules installed on your system:
+
+* `markdown`
+* `json`
+* `flask`
+* `wakeonlan`
+
+The last dependency, `wakeonlan`, is a bit of a pain-in-the-ass because it is not included in the standard Debian-style install packages associated with Ubuntu Linux distributions.  To install it without going outside the boundaries established by the distribution maintainers, you will need to set up a virtual Python environment and install the `wakelonlan` utility into the virtual environment using the Python standard `pip` utility, then invoke the `readassist` script using that virtual environment.  An outline of the commands necessary is thoughtfully provided by the Ubuntu maintainers the moment you try to install the `wakeonlan` module to the standard Python environment via `pip`.
+
+###### Invocation
 This is a Python Flask web application, that uses Flask's built-in web server.  To run it, simply invoke it from the shell:
 
 ```
