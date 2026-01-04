@@ -4,13 +4,13 @@ A Python webapp to query cloud AI for information on words, from a Kobo e-reader
 
 It can ask a remote AI model to define a word and provide information on etymology, usage, idioms and other kinds of information that a human studying the language might need to know to understand and memorize the word.
 
-The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gaskin's [NickelMenu](https://github.com/pgaskin/NickelMenu) utility. Nickelmenu allows you to customize the Kobo user interface, by adding custom menu options and commands.
+The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gaskin's [NickelMenu](https://github.com/pgaskin/NickelMenu) utility. Nickelmenu allows you to customize the Kobo user interface, by adding custom menu options and commands.  However, since `readassist` is a web application, it can be invoked by any web browser or client that supports HTTP.
 
 ### Requirements
 
-* An Ollama AI backend, either local or cloud-based
+* An Ollama AI backend, either local or cloud-based (Right now, only Ollama backend API is supported)
 * Web server capable of hosting a Python webapp
-* Kobo e-reader device
+* Kobo e-reader device, or another device with a web browser that can issue HTTP requests and display HTML responses
 
 ### Installation/Configuration
 
