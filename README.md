@@ -8,26 +8,77 @@ The webapp is designed to be invoked from a Kobo e-reader device via Patrick Gas
 
 ### Requirements
 
-* AI backend either local or cloud-based (Ollama)
+* An Ollama AI backend, either local or cloud-based
 * Web server capable of hosting a Python webapp
 * Kobo e-reader device
- 
+
 ### Installation/Configuration
 
-XXX setup instructions go here
+##### Web application (readassist.py)
 
-#### Webserver Host
+###### Invocation
+This is a Python Flask web application, that uses Flask's built-in web server.  To run it, simply invoke it from the shell:
 
-XXX setup instructions go here
+```
+python readassist.py
+```
 
-#### Kobo Device
+It has two command line arguments:
 
-* Install the NickelMenu utility on the Kobo device, following the instructions provided on the NickelMenu website.
+`--host <ip addr>` - Host IP address for this webapp (default `0.0.0.0`)
+`--port <port number>` - TCP port for this webapp (default `5000`)
+
+###### Configuration
+There are three environment variables to configure its connection to the backend Ollama server.
+
+`RA_OLLAMA_HOST_MAC` - MAC address of the Ollama server, used to send a Wake-on-LAN request to make sure it is awake before making an Ollama query.
+`RA_OLLAMA_HOST_IP` - IP address of the Ollama server
+`RA_OLLAMA_PORT` - TCP port of the Ollama server (default '11434')
+
+Right now it is assumed the Ollama server is running on a different machine, and is awoken when needed. To disable this behavior, comment out the call to `wake_ollama_server` that appears in `read_assist_web`.  (TODO for further work)
+
+###### Running as a background service
+To make it run continually, you will need to install it as a background service.
+
+For Linux, the file `readassist.service` is an example systemd configuration file that you can place into the `~/.config/systemd/user` folder.
+
+To start:
+```
+systemctl --user daemon-reload
+systemctl --user start readassist.service
+```
+
+To stop:
+```
+systemctl --user stop readassist.service
+```
+
+To run in the background when system starts:
+```
+systemctl --user enable readassist.service
+```
+
+To check status:
+```
+systemctl --user status readassist.service 
+```
+
+You may also need to enable lingering processes to allow systemd to keep the process running when you log out:
+
+```
+loginctl enable-linger $USER
+```
+
+Managing systemd is well beyond the scope of this README, but that cheat sheet should be enough to get you started.
+
+#### Kobo Device configuration
+
+* Install the NickelMenu utility on the Kobo device, following the instructions provided on the [NickelMenu website](https://github.com/pgaskin/NickelMenu).
 
 * Here is an example configuration line to add to the NickelMenu `config` file.  Adjust it to taste based on the options described in the next section:
 
 ```
-menu_item		:selection			:Read Assist	:nickel_browser:modal:http://192.168.0.94:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=idioms&text={1|S|%}&lang=it
+menu_item		:selection			:Read Assist	:nickel_browser:modal:http://192.168.0.94:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=idioms&text={1|S|%}&lang=it&model=gpt-oss:120b
 ```
 
 ### Options
@@ -61,7 +112,7 @@ A two-letter code defining the language of the text passed in the `text` paramet
 
 Name of the AI model to be queried.
 
-### Examples
+#### Examples
 
 ```
 http://localhost:5000/readassist?req_type=translate&req_type=usage&req_type=synonyms&req_type=phrases&lang=it&text=cominciare
