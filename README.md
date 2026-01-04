@@ -25,15 +25,15 @@ python readassist.py
 
 It has two command line arguments:
 
-`--host <ip addr>` - Host IP address for this webapp (default `0.0.0.0`)
-`--port <port number>` - TCP port for this webapp (default `5000`)
+* `--host <ip addr>` - Host IP address for this webapp (default `0.0.0.0`)
+* `--port <port number>` - TCP port for this webapp (default `5000`)
 
 ###### Configuration
 There are three environment variables to configure its connection to the backend Ollama server.
 
-`RA_OLLAMA_HOST_MAC` - MAC address of the Ollama server, used to send a Wake-on-LAN request to make sure it is awake before making an Ollama query.
-`RA_OLLAMA_HOST_IP` - IP address of the Ollama server
-`RA_OLLAMA_PORT` - TCP port of the Ollama server (default '11434')
+* `RA_OLLAMA_HOST_MAC` - MAC address of the Ollama server, used to send a Wake-on-LAN request to make sure it is awake before making an Ollama query.
+* `RA_OLLAMA_HOST_IP` - IP address of the Ollama server
+* `RA_OLLAMA_PORT` - TCP port of the Ollama server (default '11434')
 
 Right now it is assumed the Ollama server is running on a different machine, and is awoken when needed. To disable this behavior, comment out the call to `wake_ollama_server` that appears in `read_assist_web`.  (TODO for further work)
 
@@ -69,7 +69,7 @@ You may also need to enable lingering processes to allow systemd to keep the pro
 loginctl enable-linger $USER
 ```
 
-Managing systemd is well beyond the scope of this README, but that cheat sheet should be enough to get you started.
+Managing Linux systemd is well beyond the scope of this README, but that cheat sheet should be enough to get you started.
 
 #### Kobo Device configuration
 
