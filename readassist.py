@@ -142,7 +142,7 @@ def read_assist_web():
     req_types = request.args.getlist('req_type')
     lang_code = request.args.get('lang', 'en')
     text = request.args.get('text', '')
-    model = request.args.get('model', 'gpt-oss:20b') # Default model for web
+    model = request.args.get('model', 'gemma4:12b') # Default model for web
 
     if not text or not req_types:
         return render_template_string(HTML_TEMPLATE, text="Missing Input", lang="N/A", model=model, error="Please provide 'text' and at least one 'req_type'.", results={})
